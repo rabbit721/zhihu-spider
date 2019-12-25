@@ -2,6 +2,7 @@ import requests
 import json
 import xlwt
 from bs4 import BeautifulSoup as BS
+import pymongo
 
 queries = [u'面试', u'实习', u'找工作', u'简历']
 entries = [u'search_terms', u'search_rank', u'question_url', u'question_title',
@@ -25,7 +26,6 @@ def get_link_content(question_url, query_num):
     userid = list(dt['initialState']['entities']['questions'].keys())[0]
     question_view_num = dt['initialState']['entities']['questions'][userid]['visitCount']
     question_follow_num = dt['initialState']['entities']['questions'][userid]['followerCount']
-
 
     answerid = list(dt['initialState']['entities']['answers'].keys())[0]
     topanswer = dt['initialState']['entities']['answers'][answerid]
@@ -60,7 +60,7 @@ def get_link_content(question_url, query_num):
 
 
 def get_query_content(query):
-    global ct, total, worksheet
+    global ct, total, worksheet, collection
     for i in range(50):
         url_tmp = "https://www.zhihu.com/api/v4/search_v3?t=general&q={}" \
             "&correction=1&offset={}&limit=20&lc_idx={}&show_all_topics=0&se" \
@@ -76,11 +76,11 @@ def get_query_content(query):
         L1 = json.loads(response.text, strict=False)
         for index in range(len(L1['data'])):
             item = L1['data'][index]
-            if('object' not in item.keys()
-               or 'type' not in item['object'].keys()):
+            if('object' not in item.keys() or 'type' not in item['object'].keys()):
                 continue
             if (item['object']['type'] != 'answer'):
                 continue
+
             ct += 1
             total += 1
             link = "https://www.zhihu.com/question/" + item['object']['question']['id']
@@ -92,10 +92,22 @@ def get_query_content(query):
             title = title.replace("<em>", "")
             data = [query, ct, link, title, q_follow_num, q_view_num,
                     q_top_ans_usrname, q_top_ans_id]
+
             for i, entry in enumerate(entries, start=0):
                 worksheet.write(total, i, label=data[i])
 
-
+            update_data = {"search_terms": query,
+                           "search_rank": ct,
+                           "question_url": link,
+                           "question_title": title,
+                           "question_follow_num": q_follow_num,
+                           "question_view_num": q_view_num,
+                           "question_top_answer_username": q_top_ans_usrname,
+                           "question_top_answer_id": q_top_ans_id}
+            doc_ct = collection.estimated_document_count()
+            collection.insert_one(update_data)
+            doc_ct_new = collection.estimated_document_count()
+            assert(doc_ct == doc_ct_new - 1)
 
 
 if __name__ == '__main__':
@@ -104,18 +116,29 @@ if __name__ == '__main__':
 
     ct = 0
     total = 0
-    # creating excel
+    # creating and initializing excel workbook
     workbook = xlwt.Workbook(encoding='utf-8')
     worksheet = workbook.add_sheet('my_worksheet')
     for i, entry in enumerate(entries, start=0):
         worksheet.write(0, i, label=entry)
 
+    # initializing mongodb database
+    client = pymongo.MongoClient('mongodb://127.0.0.1:27017/')
+    mydb = client['spiderdb']  # create a new database called spiderdb
+    collist = mydb.list_collection_names()
+    if "wondercv_exe" in collist:
+        print("already exists collection with name "
+              "wondercv_exe in database spiderdb")
+
+    collection = mydb['wondercv_exe']
+    collection.delete_many({})  # clear any preexisting data
+
+    # getting data from queries
     for query in queries:
         ct = 0
         get_query_content(query)
         workbook.save('search_result.xls')
 
-    workbook.save('search_result.xls')
 
 '''
 wd.get("https://www.zhihu.com/question/295453435")
