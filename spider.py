@@ -3,6 +3,7 @@ import json
 import xlwt
 from bs4 import BeautifulSoup as BS
 import pymongo
+from time import sleep
 
 queries = [u'面试', u'实习', u'找工作', u'简历']
 entries = [u'search_terms', u'search_rank', u'question_url', u'question_title',
@@ -18,20 +19,29 @@ headers = {
     "i/604.1",
     'Accept-Encoding': 'gzip'}
 
+
+def GET(url, headers):
+    page = ""
+    while page == "":
+        try:
+            page = requests.get(url, headers=headers)
+            return page
+        except requests.ConnectionError as e:
+            print("ERR: {}".format(e))
+            print("sleep for 5 seconds")
+            sleep(5)
+            print("continuing")
+            continue
+
+
 def get_link_content(question_url, query_num):
-    html = requests.get(question_url, headers = headers)
+    html = GET(question_url, headers=headers)
     bs = BS(html.text, 'html.parser')
     res = bs.find("script", id='js-initialData')
     dt = json.loads(res.text)
     userid = list(dt['initialState']['entities']['questions'].keys())[0]
     question_view_num = dt['initialState']['entities']['questions'][userid]['visitCount']
     question_follow_num = dt['initialState']['entities']['questions'][userid]['followerCount']
-
-    answerid = list(dt['initialState']['entities']['answers'].keys())[0]
-    topanswer = dt['initialState']['entities']['answers'][answerid]
-
-    answerid = list(dt['initialState']['entities']['answers'])[0]
-
 
     answer_url_tmp = "https://www.zhihu.com/api/v4/questions/{}" \
     "/answers?include=data%5B%2A%5D.is_normal%2Cadmin_closed_comment%2Crew" \
@@ -45,10 +55,9 @@ def get_link_content(question_url, query_num):
     "5D.url%3Bdata%5B%2A%5D.author.follower_count%2Cbadge%5B%2A%5D.topics&li" \
     "mit=5&offset=0&platform=desktop&sort_by=default"
 
-    usr_url_tmp = "https://www.zhihu.com/people/{}/activities"
-
     answer_url = answer_url_tmp.format(query_num)
-    ans_response = requests.get(answer_url, headers=headers)
+    ans_response = GET(answer_url, headers=headers)
+
     ans_response.encoding = "utf-8"
     L3 = json.loads(ans_response.text)
     question_top_answer_username = L3['data'][0]['author']['name']
@@ -69,7 +78,8 @@ def get_query_content(query):
 
         url = url_tmp.format(query, i * 20, i * 20 + 7)
         print(url)
-        response = requests.get(url, headers=headers)
+        response = GET(url, headers=headers)
+        response.encoding = "utf-8"
         if response.status_code != 200:
             continue
 
@@ -81,15 +91,23 @@ def get_query_content(query):
             if (item['object']['type'] != 'answer'):
                 continue
 
+            link = "https://www.zhihu.com/question/" + item['object']['question']['id']
+            if (collection.count_documents({"search_terms": query,
+                                            "question_url": link}) != 0):
+                continue
+
             ct += 1
             total += 1
-            link = "https://www.zhihu.com/question/" + item['object']['question']['id']
             # print(str(ct) + ", " + str(item['index']) + ": " + item['highlight']['title'])
+
             (q_follow_num, q_view_num, q_top_ans_usrname,
              q_top_ans_id) = get_link_content(link, item['object']['question']['id'])
 
+
             title = item['highlight']['title'].replace("</em>", "")
             title = title.replace("<em>", "")
+            # print(title + "\n")
+
             data = [query, ct, link, title, q_follow_num, q_view_num,
                     q_top_ans_usrname, q_top_ans_id]
 
@@ -104,6 +122,7 @@ def get_query_content(query):
                            "question_view_num": q_view_num,
                            "question_top_answer_username": q_top_ans_usrname,
                            "question_top_answer_id": q_top_ans_id}
+
             doc_ct = collection.estimated_document_count()
             collection.insert_one(update_data)
             doc_ct_new = collection.estimated_document_count()
@@ -111,9 +130,6 @@ def get_query_content(query):
 
 
 if __name__ == '__main__':
-    # set limit of requests to avoid socket failure
-    requests.adapters.DEFAULT_RETRIES = 5
-
     ct = 0
     total = 0
     # creating and initializing excel workbook
