@@ -1,5 +1,7 @@
+# encoding=utf-8
 import requests
 import json
+import sys
 import xlwt
 from bs4 import BeautifulSoup as BS
 import pymongo
@@ -25,6 +27,7 @@ def GET(url, headers):
     while page == "":
         try:
             page = requests.get(url, headers=headers)
+            assert(page != None)
             return page
         except requests.ConnectionError as e:
             print("ERR: {}".format(e))
@@ -130,16 +133,24 @@ def get_query_content(query):
 
 
 if __name__ == '__main__':
+
+    path = sys.argv[1]
+    excel_path = path + '/search_result.xls'
+    mongdb_name = sys.argv[2]
+
     ct = 0
     total = 0
+
     # creating and initializing excel workbook
     workbook = xlwt.Workbook(encoding='utf-8')
+
     worksheet = workbook.add_sheet('my_worksheet')
     for i, entry in enumerate(entries, start=0):
         worksheet.write(0, i, label=entry)
 
+    workbook.save(excel_path)
     # initializing mongodb database
-    client = pymongo.MongoClient('mongodb://127.0.0.1:27017/')
+    client = pymongo.MongoClient(mongdb_name)
     mydb = client['spiderdb']  # create a new database called spiderdb
     collist = mydb.list_collection_names()
     if "wondercv_exe" in collist:
@@ -153,14 +164,4 @@ if __name__ == '__main__':
     for query in queries:
         ct = 0
         get_query_content(query)
-        workbook.save('search_result.xls')
-
-
-'''
-wd.get("https://www.zhihu.com/question/295453435")
-wd.find_element_by_xpath('//*[@id="root"]/div/div[2]/header/div[1]/div[2]/div/div/button[2]').click()
-wd.find_element_by_xpath('/html/body/div[3]/div/div/div/div[2]/div/div/div[1]/div/form/div[1]/div[2]').click()
-wd.find_element_by_name('username').send_keys('13718310500')
-wd.find_element_by_name('password').send_keys('640315')
-wd.find_element_by_xpath('/html/body/div[3]/div/div/div/div[2]/div/div/div[1]/div/form/button').click()
-'''
+        workbook.save(excel_path)
