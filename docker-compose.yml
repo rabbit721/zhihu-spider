@@ -4,6 +4,9 @@ services:
     build: .
     volumes: 
       - $PWD/test-docker:/code
+    depends_on:
+      - mongodb
+
   mongodb:
     image: mongo
     ports:
