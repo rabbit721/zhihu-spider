@@ -3,7 +3,7 @@ services:
   web:
     build: .
     volumes: 
-      - $PWD/test-docker:/code
+      - $PWD:/code
     depends_on:
       - mongodb
 
