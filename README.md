@@ -35,5 +35,6 @@ python crontab-control.py <arg1> <arg2> <arg3>
 
 ## Docker, Docker-compose 实现的爬虫 （Optional）
 - 安装要求： docker， docker-compose
+- 运行： 在本目录下运行 ``` docker-compose up --build ``` (-d 后台运行)
 
 TODO: 在docker中加入crontab control
