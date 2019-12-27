@@ -28,7 +28,7 @@ python crontab-control.py <arg1> <arg2> <arg3>
 
  
 ## 爬虫的输出：
-```
-- excel：在本目录下名为  search_results.xls
-- mongodb 数据库： 在指定的 mongodb 中 建立数据库 spiderdb， 将爬虫结果存在 wondercv_exe 集合中 并覆盖之前此集合中的文档
-```
+
+- excel：在本目录下名为  ``` search_results.xls ```
+- mongodb 数据库： 在指定的  mongodb 中 建立数据库 ``` spiderdb ```， 将爬虫结果存在 ```wondercv_exe``` 集合中 并覆盖之前此集合中的文档
+
