@@ -1,0 +1,5 @@
+xlwt
+pymongo
+python-crontab==2.4.0
+requests==2.22.0
+beautifulsoup4==4.8.1

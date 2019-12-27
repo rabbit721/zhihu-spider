@@ -1,0 +1,10 @@
+version: '3'
+services:
+  web:
+    build: .
+    volumes: 
+      - $PWD/test-docker:/code
+  mongodb:
+    image: mongo
+    ports:
+      - "27017:27017"
