@@ -33,4 +33,7 @@ python crontab-control.py <arg1> <arg2> <arg3>
 - mongodb 数据库： 在指定的  mongodb 中 建立数据库 ``` spiderdb ```， 将爬虫结果存在 ```wondercv_exe``` 集合中 并覆盖之前此集合中的文档
 
 
+## Docker, Docker-compose 实现的爬虫 （Optional）
+- 安装要求： docker， docker-compose
+
 TODO: 在docker中加入crontab control
